@@ -1,0 +1,70 @@
+vars:
+  - workflows/params.yaml
+
+stages:
+  load_binance:
+    cmd: python workflows/load_binance_stocks.py
+    deps:
+    - workflows/load_binance_stocks.py
+    params:
+    - workflows/params.yaml:
+    outs:
+    - ${load_binance.paths.output}
+  slice_ts:
+    cmd: python workflows/slice_trading_ts.py --in_file=${load_binance.paths.output}
+    deps:
+    - workflows/slice_trading_ts.py
+    - ${load_binance.paths.output}
+    params:
+    - workflows/params.yaml:
+    outs:
+    - ${slice_ts.paths.output.cluster}
+    - ${slice_ts.paths.output.predict}
+  optuna_optimize:
+    cmd: >-
+      python workflows/optuna_optimize.py
+      --in_file ${slice_ts.paths.output.cluster}
+      --model_name ${optuna_optimize.model_name}
+      ${optuna_optimize.optimize_range}
+      ${optuna_optimize.model_prmt}
+      --best_clusters ${optuna_optimize.best_clusters}
+      --n_trials ${optuna_optimize.n_trials}
+      --par_file ${optuna_optimize.paths.output.parametrs}
+    deps:
+    - workflows/slice_trading_ts.py
+    - workflows/optuna_optimize.py
+    - ${slice_ts.paths.output.cluster}
+    params:
+    - workflows/params.yaml:
+    outs:
+     - ${optuna_optimize.paths.output.parametrs}
+  train_save:
+    cmd: >-
+      python workflows/train_save_best.py
+      --in_file ${slice_ts.paths.output.cluster}
+      --out_file ${train_save.paths.output.model}
+      --model_name ${train_save.model_name}
+      --par_file ${train_save.paths.input.model_par}
+    deps:
+    - workflows/optuna_optimize.py
+    - workflows/train_save_best.py
+    - ${slice_ts.paths.output.cluster}
+    params:
+    - workflows/params.yaml:
+    outs:
+     - ${train_save.paths.output.model}
+  visualization:
+    cmd: >-
+      python workflows/visualization.py
+      --model_path ${train_save.paths.output.model}
+      --data_path ${slice_ts.paths.output.cluster}
+      --pred_df_path ${slice_ts.paths.output.predict}
+      --n_best ${visualization.n_best}
+    deps:
+    - workflows/visualization.py
+    - ${slice_ts.paths.output.cluster}
+    - ${slice_ts.paths.output.predict}
+    - ${train_save.paths.output.model}
+    params:
+    - workflows/params.yaml:
+    

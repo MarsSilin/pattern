@@ -1,0 +1,345 @@
+schema: '2.0'
+stages:
+  load_binance:
+    cmd: python workflows/load_binance_stocks.py
+    deps:
+    - path: workflows/load_binance_stocks.py
+      md5: cfb387cbece9f76d3ed17b2f9e89d483
+      size: 975
+    params:
+      workflows/params.yaml:
+        load_binance:
+          symbol: BTCUSDT
+          start: '2023-05-01'
+          end: '2024-05-01'
+          interval: 1m
+          paths:
+            output: data/raw/btc_2023_10_1.csv
+        optuna_optimize:
+          optimize_range:
+            opt_min: 40
+            opt_max: 200
+            opt_step: 10
+          model_prmt:
+            max_iter: 100
+            n_init: 1
+            n_clusters: 10
+          best_clusters: 10
+          n_trials: 10
+          model_name: KShape
+          paths:
+            input: ${slice_ts.paths.cluster}
+            output:
+              parametrs: models/KShape_best.yaml
+        slice_ts:
+          column_value: open
+          period: 30
+          step: 30
+          rolling_period: 10
+          predict_period: 20
+          train_sample: -1
+          paths:
+            input: ${load_binance.paths.output}
+            output:
+              cluster: data/interim/btc_clst_2021_1_1.30_10.npy
+              predict: data/interim/btc_prct_2021_1_1.30_10.csv
+              scaler: models/scaler.pickle
+        train_save:
+          model_name: KShape
+          paths:
+            input:
+              data: ${slice_ts.paths.cluster}
+              model_par: models/KShape_best.yaml
+            output:
+              model: models/KShape.pickle
+        visualization:
+          n_best: 10
+          paths:
+            input:
+              model_path: ${train_save.paths.output.model}
+              data_path: ${slice_ts.paths.cluster}
+              pred_df_path: ${slice_ts.paths.predict}
+    outs:
+    - path: data/raw/btc_2023_10_1.csv
+      md5: 9bf0127b4112be475354653b024833d3
+      size: 52439979
+  slice_ts:
+    cmd: python workflows/slice_trading_ts.py --in_file=data/raw/btc_2023_10_1.csv
+    deps:
+    - path: data/raw/btc_2023_10_1.csv
+      md5: 9bf0127b4112be475354653b024833d3
+      size: 52439979
+    - path: workflows/slice_trading_ts.py
+      md5: ac1a5e795ac4b5106a0e4bec9a59de16
+      size: 2504
+    params:
+      workflows/params.yaml:
+        load_binance:
+          symbol: BTCUSDT
+          start: '2023-05-01'
+          end: '2024-05-01'
+          interval: 1m
+          paths:
+            output: data/raw/btc_2023_10_1.csv
+        optuna_optimize:
+          optimize_range:
+            opt_min: 40
+            opt_max: 200
+            opt_step: 10
+          model_prmt:
+            max_iter: 100
+            n_init: 1
+            n_clusters: 10
+          best_clusters: 10
+          n_trials: 10
+          model_name: KShape
+          paths:
+            input: ${slice_ts.paths.cluster}
+            output:
+              parametrs: models/KShape_best.yaml
+        slice_ts:
+          column_value: open
+          period: 30
+          step: 30
+          rolling_period: 10
+          predict_period: 20
+          train_sample: -1
+          paths:
+            input: ${load_binance.paths.output}
+            output:
+              cluster: data/interim/btc_clst_2021_1_1.30_10.npy
+              predict: data/interim/btc_prct_2021_1_1.30_10.csv
+              scaler: models/scaler.pickle
+        train_save:
+          model_name: KShape
+          paths:
+            input:
+              data: ${slice_ts.paths.cluster}
+              model_par: models/KShape_best.yaml
+            output:
+              model: models/KShape.pickle
+        visualization:
+          n_best: 10
+          paths:
+            input:
+              model_path: ${train_save.paths.output.model}
+              data_path: ${slice_ts.paths.cluster}
+              pred_df_path: ${slice_ts.paths.predict}
+    outs:
+    - path: data/interim/btc_clst_2021_1_1.30_10.npy
+      md5: 0ad9af1d789cfd392264629aa69a15c5
+      size: 4128608
+    - path: data/interim/btc_prct_2021_1_1.30_10.csv
+      md5: b4d088f1f41f5222b8983f84a0a8e175
+      size: 16935595
+  optuna_optimize:
+    cmd: python workflows/optuna_optimize.py --in_file data/interim/btc_clst_2021_1_1.30_10.npy
+      --model_name KShape --opt_min 40 --opt_max 200 --opt_step 10 --max_iter 100
+      --n_init 1 --n_clusters 10 --best_clusters 10 --n_trials 10 --par_file models/KShape_best.yaml
+    deps:
+    - path: data/interim/btc_clst_2021_1_1.30_10.npy
+      md5: 6ab1384179483030c328d75975a75858
+      size: 2663168
+    - path: workflows/optuna_optimize.py
+      md5: 654e34a541205914a59d875e9b5f23c4
+      size: 3155
+    - path: workflows/slice_trading_ts.py
+      md5: ac1a5e795ac4b5106a0e4bec9a59de16
+      size: 2504
+    params:
+      workflows/params.yaml:
+        load_binance:
+          symbol: BTCUSDT
+          start: '2023-01-01'
+          end: '2024-05-01'
+          interval: 1m
+          paths:
+            output: data/raw/btc_2023_10_1.csv
+        optuna_optimize:
+          optimize_range:
+            opt_min: 40
+            opt_max: 200
+            opt_step: 10
+          model_prmt:
+            max_iter: 100
+            n_init: 1
+            n_clusters: 10
+          best_clusters: 10
+          n_trials: 10
+          model_name: KShape
+          paths:
+            input: ${slice_ts.paths.cluster}
+            output:
+              parametrs: models/KShape_best.yaml
+        slice_ts:
+          column_value: open
+          period: 30
+          step: 30
+          rolling_period: 1
+          predict_period: 30
+          train_sample: -1
+          paths:
+            input: ${load_binance.paths.output}
+            output:
+              cluster: data/interim/btc_clst_2021_1_1.30_10.npy
+              predict: data/interim/btc_prct_2021_1_1.30_10.csv
+              scaler: models/scaler.pickle
+        train_save:
+          model_name: KShape
+          paths:
+            input:
+              data: ${slice_ts.paths.cluster}
+              model_par: models/KShape_best.yaml
+            output:
+              model: models/KShape.pickle
+        visualization:
+          n_best: 10
+          paths:
+            input:
+              model_path: ${train_save.paths.output.model}
+              data_path: ${slice_ts.paths.cluster}
+              pred_df_path: ${slice_ts.paths.predict}
+    outs:
+    - path: models/KShape_best.yaml
+      md5: 76b3727d16601e784a8ac2b6e37d7949
+      size: 43
+  train_save:
+    cmd: python workflows/train_save_best.py --in_file data/interim/btc_clst_2021_1_1.30_10.npy
+      --out_file models/KShape.pickle --model_name KShape --par_file models/KShape_best.yaml
+    deps:
+    - path: data/interim/btc_clst_2021_1_1.30_10.npy
+      md5: 0ad9af1d789cfd392264629aa69a15c5
+      size: 4128608
+    - path: workflows/optuna_optimize.py
+      md5: 654e34a541205914a59d875e9b5f23c4
+      size: 3155
+    - path: workflows/train_save_best.py
+      md5: 221cb22b2024e5fdb1cb47af8632cfcb
+      size: 1641
+    params:
+      workflows/params.yaml:
+        load_binance:
+          symbol: BTCUSDT
+          start: '2023-05-01'
+          end: '2024-05-01'
+          interval: 1m
+          paths:
+            output: data/raw/btc_2023_10_1.csv
+        optuna_optimize:
+          optimize_range:
+            opt_min: 40
+            opt_max: 200
+            opt_step: 10
+          model_prmt:
+            max_iter: 100
+            n_init: 1
+            n_clusters: 10
+          best_clusters: 10
+          n_trials: 10
+          model_name: KShape
+          paths:
+            input: ${slice_ts.paths.cluster}
+            output:
+              parametrs: models/KShape_best.yaml
+        slice_ts:
+          column_value: open
+          period: 30
+          step: 30
+          rolling_period: 10
+          predict_period: 20
+          train_sample: -1
+          paths:
+            input: ${load_binance.paths.output}
+            output:
+              cluster: data/interim/btc_clst_2021_1_1.30_10.npy
+              predict: data/interim/btc_prct_2021_1_1.30_10.csv
+              scaler: models/scaler.pickle
+        train_save:
+          model_name: KShape
+          paths:
+            input:
+              data: ${slice_ts.paths.cluster}
+              model_par: models/KShape_best.yaml
+            output:
+              model: models/KShape.pickle
+        visualization:
+          n_best: 10
+          paths:
+            input:
+              model_path: ${train_save.paths.output.model}
+              data_path: ${slice_ts.paths.cluster}
+              pred_df_path: ${slice_ts.paths.predict}
+    outs:
+    - path: models/KShape.pickle
+      md5: 6cc45b957d5d4432efebe73d6aaff7e0
+      size: 370207
+  visualization:
+    cmd: python workflows/visualization.py --model_path models/KShape.pickle --data_path
+      data/interim/btc_clst_2021_1_1.30_10.npy --pred_df_path data/interim/btc_prct_2021_1_1.30_10.csv
+      --n_best 10
+    deps:
+    - path: data/interim/btc_clst_2021_1_1.30_10.npy
+      md5: 0ad9af1d789cfd392264629aa69a15c5
+      size: 4128608
+    - path: data/interim/btc_prct_2021_1_1.30_10.csv
+      md5: b4d088f1f41f5222b8983f84a0a8e175
+      size: 16935595
+    - path: models/KShape.pickle
+      md5: 6cc45b957d5d4432efebe73d6aaff7e0
+      size: 370207
+    - path: workflows/visualization.py
+      md5: 7fffeecd27640fcde5b0066fd752a094
+      size: 1918
+    params:
+      workflows/params.yaml:
+        load_binance:
+          symbol: BTCUSDT
+          start: '2023-05-01'
+          end: '2024-05-01'
+          interval: 1m
+          paths:
+            output: data/raw/btc_2023_10_1.csv
+        optuna_optimize:
+          optimize_range:
+            opt_min: 40
+            opt_max: 200
+            opt_step: 10
+          model_prmt:
+            max_iter: 100
+            n_init: 1
+            n_clusters: 10
+          best_clusters: 10
+          n_trials: 10
+          model_name: KShape
+          paths:
+            input: ${slice_ts.paths.cluster}
+            output:
+              parametrs: models/KShape_best.yaml
+        slice_ts:
+          column_value: open
+          period: 30
+          step: 30
+          rolling_period: 10
+          predict_period: 20
+          train_sample: -1
+          paths:
+            input: ${load_binance.paths.output}
+            output:
+              cluster: data/interim/btc_clst_2021_1_1.30_10.npy
+              predict: data/interim/btc_prct_2021_1_1.30_10.csv
+              scaler: models/scaler.pickle
+        train_save:
+          model_name: KShape
+          paths:
+            input:
+              data: ${slice_ts.paths.cluster}
+              model_par: models/KShape_best.yaml
+            output:
+              model: models/KShape.pickle
+        visualization:
+          n_best: 10
+          paths:
+            input:
+              model_path: ${train_save.paths.output.model}
+              data_path: ${slice_ts.paths.cluster}
+              pred_df_path: ${slice_ts.paths.predict}
